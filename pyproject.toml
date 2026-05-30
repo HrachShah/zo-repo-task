@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zo-repo-task"
+version = "0.1.0"
+description = "A minimal CLI tool to list and explore GitHub repositories"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["click", "requests"]
