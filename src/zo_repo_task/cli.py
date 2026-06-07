@@ -76,7 +76,7 @@ def format_repos_table(repos: list[dict[str, Any]]) -> str:
     name_width = max(len(r["full_name"]) for r in repos)
     desc_width = min(50, max(len(r.get("description", "") or "") for r in repos))
 
-    header = f"{'Name':<{name_width}} {'Stars':>6} {'Forks':>6} {'Language':<12} {'Pushed'}"
+    header = f"{'Name':<{name_width + 70}} {'Stars':>6} {'Forks':>6} {'Language':<12} {'Pushed'}"
     sep = "-" * len(header)
     rows = [header, sep]
 
