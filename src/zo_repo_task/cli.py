@@ -74,11 +74,24 @@ def format_repos_table(repos: list[dict[str, Any]]) -> str:
         return "(no repositories)"
 
     name_width = max(len(r["full_name"]) for r in repos)
-    desc_width = min(50, max(len(r.get("description", "") or "") for r in repos))
+    # textwrap.shorten rejects width=0, which happens when every repo in
+    # the list has no description (or only an empty string). It also
+    # rejects widths below 6 because the default placeholder is " [...]"
+    # (6 chars). Clamp to a usable minimum so the call always succeeds;
+    # an empty description is filtered out below and the width is
+    # otherwise irrelevant.
+    raw_desc_width = max(len(r.get("description", "") or "") for r in repos)
+    desc_width = min(50, max(1, raw_desc_width))
+    shorten_width = max(6, desc_width)
 
     header = f"{'Name':<{name_width}} {'Stars':>6} {'Forks':>6} {'Language':<12} {'Pushed'}"
     sep = "-" * len(header)
     rows = [header, sep]
+
+    # Column offsets in the header line, used to align the wrapped
+    # description under the Pushed column instead of using a magic
+    # constant that drifts as the name column grows or shrinks.
+    pushed_col_start = len(f"{'Name':<{name_width}} {'Stars':>6} {'Forks':>6} {'Language':<12} ")
 
     for repo in repos:
         name = repo["full_name"][:name_width]
@@ -86,11 +99,11 @@ def format_repos_table(repos: list[dict[str, Any]]) -> str:
         forks = str(repo.get("forks_count", 0))
         lang = str(repo.get("language") or "?")[:12]
         pushed = (repo.get("pushed_at") or "?")[:10]
-        desc = textwrap.shorten(repo.get("description") or "", width=desc_width)
+        desc = textwrap.shorten(repo.get("description") or "", width=shorten_width)
         rows.append(f"{name:<{name_width}} {stars:>6} {forks:>6} {lang:<12} {pushed}")
 
         if desc:
-            rows.append(f"{'':>{name_width + 70}}  {desc}")
+            rows.append(f"{'':>{pushed_col_start}}{desc}")
 
     return "\n".join(rows)
 
