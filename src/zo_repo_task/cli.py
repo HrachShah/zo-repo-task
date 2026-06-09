@@ -116,8 +116,24 @@ def cmd_list(args: argparse.Namespace) -> None:
 
 def cmd_info(args: argparse.Namespace) -> None:
     """Handle the info command."""
+    # Validate and split the owner/name argument. The previous code was a
+    # single rsplit("/", 1) which crashed with ValueError on a missing
+    # slash ("noslash" returns a one-element list) and silently split
+    # wrong on extra slashes ("a/b/c" became owner="a", repo="b/c"),
+    # which then hit the API as /repos/a/b%2Fc and produced a confusing
+    # 404. We now require exactly one '/' and reject anything else up
+    # front with a clear usage error.
+    parts = args.repo.strip().rstrip("/").split("/")
+    if len(parts) != 2 or not all(parts):
+        print(
+            f"Error: '{args.repo}' is not in owner/name format. "
+            f"Expected exactly one '/' separating the owner and repo name.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    owner, repo = parts
+
     session = make_session()
-    owner, repo = args.repo.strip().rstrip("/").rsplit("/", 1)
     try:
         data = get_repo(owner, repo, session)
     except requests.HTTPError as e:
