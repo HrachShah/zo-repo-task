@@ -114,10 +114,38 @@ def cmd_list(args: argparse.Namespace) -> None:
         print(format_repos_table(repos))
 
 
+def _split_owner_repo(repo_arg: str) -> tuple[str, str] | None:
+    """Split an `owner/name` CLI argument into (owner, repo).
+
+    Returns None if the argument is empty, contains no `/`, contains more than one `/`,
+    or has an empty owner/repo segment. A trailing `/` is tolerated and stripped before
+    splitting (e.g. `octocat/Hello-World/`), but internal whitespace and additional
+    slashes are rejected.
+    """
+    if repo_arg is None:
+        return None
+    cleaned = repo_arg.strip().rstrip("/")
+    if not cleaned or "/" not in cleaned:
+        return None
+    parts = cleaned.rsplit("/", 1)
+    owner, repo = parts[0], parts[1]
+    if not owner or not repo or "/" in owner:
+        return None
+    return owner, repo
+
+
 def cmd_info(args: argparse.Namespace) -> None:
     """Handle the info command."""
     session = make_session()
-    owner, repo = args.repo.strip().rstrip("/").rsplit("/", 1)
+    parts = _split_owner_repo(args.repo)
+    if parts is None:
+        print(
+            "Error: invalid repo argument %r; expected 'owner/name' (e.g. 'octocat/Hello-World')"
+            % args.repo,
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    owner, repo = parts
     try:
         data = get_repo(owner, repo, session)
     except requests.HTTPError as e:
@@ -185,8 +213,11 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 0
 
-    if args.command in ("list", "search") and not getattr(args, "user", None) and not getattr(args, "query", None):
-        print(f"Error: --user required for '{args.command}' command", file=sys.stderr)
+    if args.command == "list" and not getattr(args, "user", None):
+        print("Error: --user is required for 'list' (or set GITHUB_USER)", file=sys.stderr)
+        return 1
+    if args.command == "search" and not getattr(args, "query", "").strip():
+        print("Error: a non-empty query is required for 'search'", file=sys.stderr)
         return 1
 
     try:
