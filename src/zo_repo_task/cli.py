@@ -26,6 +26,8 @@ def make_session() -> requests.Session:
 
 def list_repos(user: str, session: requests.Session, limit: int = 30) -> list[dict[str, Any]]:
     """List repositories for a GitHub user, sorted by recently pushed."""
+    if limit < 1:
+        raise ValueError("limit must be at least 1")
     url = f"{DEFAULT_BASE_URL}/users/{user}/repos"
     params = {"sort": "pushed", "per_page": min(limit, 100), "type": "owner"}
     response = session.get(url, params=params, timeout=15)
@@ -43,6 +45,8 @@ def get_repo(owner: str, repo: str, session: requests.Session) -> dict[str, Any]
 
 def search_repos(query: str, session: requests.Session, limit: int = 30) -> list[dict[str, Any]]:
     """Search repositories by keyword."""
+    if limit < 1:
+        raise ValueError("limit must be at least 1")
     url = f"{DEFAULT_BASE_URL}/search/repositories"
     params = {"q": query, "sort": "stars", "per_page": min(limit, 100)}
     response = session.get(url, params=params, timeout=15)
