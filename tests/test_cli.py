@@ -19,6 +19,22 @@ class RepositoryFormattingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "limit must be at least 1"):
             search_repos("query", Mock(), limit=-1)
 
+    def test_api_search_ignores_scalar_payload(self):
+        response = Mock()
+        response.json.return_value = []
+        session = Mock()
+        session.get.return_value = response
+
+        self.assertEqual(search_repos("query", session), [])
+
+    def test_api_search_ignores_non_list_items(self):
+        response = Mock()
+        response.json.return_value = {"items": {"full_name": "owner/repo"}}
+        session = Mock()
+        session.get.return_value = response
+
+        self.assertEqual(search_repos("query", session), [])
+
     def test_table_handles_empty_descriptions_and_missing_push_timestamp(self):
         result = format_repos_table(
             [{"full_name": "owner/repo", "description": None, "pushed_at": None}]
