@@ -119,7 +119,11 @@ def cmd_list(args: argparse.Namespace) -> None:
 def cmd_info(args: argparse.Namespace) -> None:
     """Handle the info command."""
     session = make_session()
-    owner, repo = args.repo.strip().rstrip("/").rsplit("/", 1)
+    repo_ref = args.repo.strip().strip("/")
+    if "/" not in repo_ref:
+        print("Error: repository must use owner/name format", file=sys.stderr)
+        return
+    owner, repo = repo_ref.rsplit("/", 1)
     try:
         data = get_repo(owner, repo, session)
     except requests.HTTPError as e:
