@@ -54,6 +54,7 @@ def search_repos(query: str, session: requests.Session, limit: int = 30) -> list
 def format_repo_text(repo: dict[str, Any], indent: int = 0) -> str:
     """Format a single repository as human-readable text."""
     prefix = "  " * indent
+    pushed = (repo.get("pushed_at") or "?")[:10]
     lines = [
         f"{prefix}{repo['full_name']}",
     ]
@@ -63,7 +64,7 @@ def format_repo_text(repo: dict[str, Any], indent: int = 0) -> str:
         f"{prefix}  stars={repo.get('stargazers_count', 0)} "
         f"forks={repo.get('forks_count', 0)} "
         f"lang={repo.get('language') or '?'} "
-        f"pushed={repo.get('pushed_at', '?')[:10]}"
+        f"pushed={pushed}"
     )
     return "\n".join(lines)
 
@@ -74,7 +75,7 @@ def format_repos_table(repos: list[dict[str, Any]]) -> str:
         return "(no repositories)"
 
     name_width = max(len(r["full_name"]) for r in repos)
-    desc_width = min(50, max(len(r.get("description", "") or "") for r in repos))
+    desc_width = min(50, max(1, max(len(r.get("description", "") or "") for r in repos)))
 
     header = f"{'Name':<{name_width}} {'Stars':>6} {'Forks':>6} {'Language':<12} {'Pushed'}"
     sep = "-" * len(header)
@@ -86,7 +87,8 @@ def format_repos_table(repos: list[dict[str, Any]]) -> str:
         forks = str(repo.get("forks_count", 0))
         lang = str(repo.get("language") or "?")[:12]
         pushed = (repo.get("pushed_at") or "?")[:10]
-        desc = textwrap.shorten(repo.get("description") or "", width=desc_width)
+        raw_description = repo.get("description") or ""
+        desc = textwrap.shorten(raw_description, width=desc_width) if raw_description else ""
         rows.append(f"{name:<{name_width}} {stars:>6} {forks:>6} {lang:<12} {pushed}")
 
         if desc:
