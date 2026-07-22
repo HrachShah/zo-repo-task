@@ -24,10 +24,17 @@ def make_session() -> requests.Session:
     return session
 
 
+def validate_limit(limit: int) -> int:
+    """Return a usable API page size or reject an invalid one."""
+    if limit < 1:
+        raise ValueError("limit must be at least 1")
+    return min(limit, 100)
+
+
 def list_repos(user: str, session: requests.Session, limit: int = 30) -> list[dict[str, Any]]:
     """List repositories for a GitHub user, sorted by recently pushed."""
     url = f"{DEFAULT_BASE_URL}/users/{user}/repos"
-    params = {"sort": "pushed", "per_page": min(limit, 100), "type": "owner"}
+    params = {"sort": "pushed", "per_page": validate_limit(limit), "type": "owner"}
     response = session.get(url, params=params, timeout=15)
     response.raise_for_status()
     return response.json()
@@ -44,7 +51,7 @@ def get_repo(owner: str, repo: str, session: requests.Session) -> dict[str, Any]
 def search_repos(query: str, session: requests.Session, limit: int = 30) -> list[dict[str, Any]]:
     """Search repositories by keyword."""
     url = f"{DEFAULT_BASE_URL}/search/repositories"
-    params = {"q": query, "sort": "stars", "per_page": min(limit, 100)}
+    params = {"q": query, "sort": "stars", "per_page": validate_limit(limit)}
     response = session.get(url, params=params, timeout=15)
     response.raise_for_status()
     data = response.json()
@@ -100,7 +107,7 @@ def cmd_list(args: argparse.Namespace) -> None:
     session = make_session()
     try:
         repos = list_repos(args.user, session, limit=args.limit)
-    except requests.HTTPError as e:
+    except (requests.HTTPError, ValueError) as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 
@@ -143,7 +150,7 @@ def cmd_search(args: argparse.Namespace) -> None:
     session = make_session()
     try:
         results = search_repos(args.query, session, limit=args.limit)
-    except requests.HTTPError as e:
+    except (requests.HTTPError, ValueError) as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 

@@ -4,7 +4,7 @@ from contextlib import redirect_stderr
 from io import StringIO
 from unittest.mock import patch
 
-from zo_repo_task.cli import cmd_info
+from zo_repo_task.cli import cmd_info, list_repos, search_repos
 
 
 class InfoCommandTests(unittest.TestCase):
@@ -27,3 +27,15 @@ class InfoCommandTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LimitValidationTests(unittest.TestCase):
+    def test_list_rejects_non_positive_limit_before_request(self):
+        session = object()
+        with self.assertRaisesRegex(ValueError, "limit must be at least 1"):
+            list_repos("owner", session, limit=0)
+
+    def test_search_rejects_non_positive_limit_before_request(self):
+        session = object()
+        with self.assertRaisesRegex(ValueError, "limit must be at least 1"):
+            search_repos("query", session, limit=-1)
