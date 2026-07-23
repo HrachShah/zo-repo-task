@@ -24,6 +24,13 @@ class InfoCommandTests(unittest.TestCase):
         self.assertEqual(error.getvalue().strip(), "Error: repository must use owner/name format")
         make_session.assert_not_called()
 
+    def test_formats_missing_pushed_at_without_crashing(self):
+        from zo_repo_task.cli import format_repo_text
+
+        output = format_repo_text({"full_name": "owner/repo", "pushed_at": None})
+
+        self.assertIn("pushed=?", output)
+
 
 if __name__ == "__main__":
     unittest.main()

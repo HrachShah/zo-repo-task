@@ -66,11 +66,13 @@ def format_repo_text(repo: dict[str, Any], indent: int = 0) -> str:
     ]
     if desc := repo.get("description"):
         lines.append(f"{prefix}  {textwrap.shorten(desc, width=70)}")
+    pushed_at = repo.get("pushed_at")
+    pushed = pushed_at[:10] if isinstance(pushed_at, str) else "?"
     lines.append(
         f"{prefix}  stars={repo.get('stargazers_count', 0)} "
         f"forks={repo.get('forks_count', 0)} "
         f"lang={repo.get('language') or '?'} "
-        f"pushed={repo.get('pushed_at', '?')[:10]}"
+        f"pushed={pushed}"
     )
     return "\n".join(lines)
 
