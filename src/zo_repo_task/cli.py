@@ -14,6 +14,13 @@ import requests
 DEFAULT_BASE_URL = "https://api.github.com"
 
 
+def validate_limit(limit: int) -> int:
+    """Return a usable API page size or reject an invalid one."""
+    if limit < 1:
+        raise ValueError("limit must be at least 1")
+    return min(limit, 100)
+
+
 def make_session() -> requests.Session:
     """Create a requests session with appropriate headers."""
     session = requests.Session()
@@ -27,7 +34,7 @@ def make_session() -> requests.Session:
 def list_repos(user: str, session: requests.Session, limit: int = 30) -> list[dict[str, Any]]:
     """List repositories for a GitHub user, sorted by recently pushed."""
     url = f"{DEFAULT_BASE_URL}/users/{user}/repos"
-    params = {"sort": "pushed", "per_page": min(limit, 100), "type": "owner"}
+    params = {"sort": "pushed", "per_page": validate_limit(limit), "type": "owner"}
     response = session.get(url, params=params, timeout=15)
     response.raise_for_status()
     return response.json()
@@ -44,7 +51,7 @@ def get_repo(owner: str, repo: str, session: requests.Session) -> dict[str, Any]
 def search_repos(query: str, session: requests.Session, limit: int = 30) -> list[dict[str, Any]]:
     """Search repositories by keyword."""
     url = f"{DEFAULT_BASE_URL}/search/repositories"
-    params = {"q": query, "sort": "stars", "per_page": min(limit, 100)}
+    params = {"q": query, "sort": "stars", "per_page": validate_limit(limit)}
     response = session.get(url, params=params, timeout=15)
     response.raise_for_status()
     data = response.json()
@@ -114,10 +121,15 @@ def cmd_list(args: argparse.Namespace) -> None:
         print(format_repos_table(repos))
 
 
-def cmd_info(args: argparse.Namespace) -> None:
+def cmd_info(args: argparse.Namespace) -> int:
     """Handle the info command."""
+    repo_ref = args.repo.strip().strip("/")
+    if repo_ref.count("/") != 1 or any(not part for part in repo_ref.split("/")):
+        print("Error: repository must use owner/name format", file=sys.stderr)
+        return 1
+
     session = make_session()
-    owner, repo = args.repo.strip().rstrip("/").rsplit("/", 1)
+    owner, repo = repo_ref.split("/", 1)
     try:
         data = get_repo(owner, repo, session)
     except requests.HTTPError as e:
@@ -132,6 +144,7 @@ def cmd_info(args: argparse.Namespace) -> None:
         topics = data.get("topics", [])
         if topics:
             print(f"  Topics: {', '.join(topics)}")
+    return 0
 
 
 def cmd_search(args: argparse.Namespace) -> None:
@@ -190,11 +203,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     try:
-        args.func(args)
+        result = args.func(args)
     except requests.RequestException as e:
         print(f"Network error: {e}", file=sys.stderr)
         return 1
-    return 0
+    return result if isinstance(result, int) else 0
 
 
 if __name__ == "__main__":
