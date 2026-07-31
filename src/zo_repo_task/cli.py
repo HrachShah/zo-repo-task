@@ -70,7 +70,7 @@ def format_repo_text(repo: dict[str, Any], indent: int = 0) -> str:
         f"{prefix}  stars={repo.get('stargazers_count', 0)} "
         f"forks={repo.get('forks_count', 0)} "
         f"lang={repo.get('language') or '?'} "
-        f"pushed={repo.get('pushed_at', '?')[:10]}"
+        f"pushed={(repo.get('pushed_at') or '?')[:10]}"
     )
     return "\n".join(lines)
 

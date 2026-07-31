@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock
 
-from zo_repo_task.cli import list_repos, search_repos, validate_limit
+from zo_repo_task.cli import format_repo_text, list_repos, search_repos, validate_limit
 
 
 class LimitValidationTests(unittest.TestCase):
@@ -25,3 +25,9 @@ class LimitValidationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             search_repos("query", session, limit=-1)
         session.get.assert_not_called()
+
+
+class RepositoryFormattingTests(unittest.TestCase):
+    def test_format_repo_text_handles_missing_push_timestamp(self):
+        text = format_repo_text({"full_name": "owner/project", "pushed_at": None})
+        self.assertIn("pushed=?", text)
