@@ -32,6 +32,10 @@ class RepositoryFormattingTests(unittest.TestCase):
         text = format_repo_text({"full_name": "owner/project", "pushed_at": None})
         self.assertIn("pushed=?", text)
 
+    def test_format_repo_text_handles_missing_name(self):
+        text = format_repo_text({"description": "A project", "pushed_at": None})
+        self.assertTrue(text.startswith("?"))
+
     def test_format_repos_table_handles_empty_descriptions(self):
         text = format_repos_table([{"full_name": "owner/project", "description": None}])
         self.assertIn("owner/project", text)

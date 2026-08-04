@@ -62,7 +62,7 @@ def format_repo_text(repo: dict[str, Any], indent: int = 0) -> str:
     """Format a single repository as human-readable text."""
     prefix = "  " * indent
     lines = [
-        f"{prefix}{repo['full_name']}",
+        f"{prefix}{repo.get('full_name') or '?'}",
     ]
     if desc := repo.get("description"):
         lines.append(f"{prefix}  {textwrap.shorten(desc, width=70)}")
