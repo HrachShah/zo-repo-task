@@ -24,10 +24,17 @@ def make_session() -> requests.Session:
     return session
 
 
+def _api_limit(limit: int) -> int:
+    """Return a valid GitHub page size for a positive requested limit."""
+    if limit < 1:
+        raise ValueError("limit must be at least 1")
+    return min(limit, 100)
+
+
 def list_repos(user: str, session: requests.Session, limit: int = 30) -> list[dict[str, Any]]:
     """List repositories for a GitHub user, sorted by recently pushed."""
     url = f"{DEFAULT_BASE_URL}/users/{user}/repos"
-    params = {"sort": "pushed", "per_page": min(limit, 100), "type": "owner"}
+    params = {"sort": "pushed", "per_page": _api_limit(limit), "type": "owner"}
     response = session.get(url, params=params, timeout=15)
     response.raise_for_status()
     return response.json()
@@ -44,7 +51,7 @@ def get_repo(owner: str, repo: str, session: requests.Session) -> dict[str, Any]
 def search_repos(query: str, session: requests.Session, limit: int = 30) -> list[dict[str, Any]]:
     """Search repositories by keyword."""
     url = f"{DEFAULT_BASE_URL}/search/repositories"
-    params = {"q": query, "sort": "stars", "per_page": min(limit, 100)}
+    params = {"q": query, "sort": "stars", "per_page": _api_limit(limit)}
     response = session.get(url, params=params, timeout=15)
     response.raise_for_status()
     data = response.json()
