@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock
 
-from zo_repo_task.cli import format_repo_text, list_repos, search_repos, validate_limit
+from zo_repo_task.cli import format_repo_text, format_repos_table, list_repos, search_repos, validate_limit
 
 
 class LimitValidationTests(unittest.TestCase):
@@ -31,3 +31,7 @@ class RepositoryFormattingTests(unittest.TestCase):
     def test_format_repo_text_handles_missing_push_timestamp(self):
         text = format_repo_text({"full_name": "owner/project", "pushed_at": None})
         self.assertIn("pushed=?", text)
+
+    def test_format_repos_table_handles_empty_descriptions(self):
+        text = format_repos_table([{"full_name": "owner/project", "description": None}])
+        self.assertIn("owner/project", text)

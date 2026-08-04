@@ -80,20 +80,21 @@ def format_repos_table(repos: list[dict[str, Any]]) -> str:
     if not repos:
         return "(no repositories)"
 
-    name_width = max(len(r["full_name"]) for r in repos)
-    desc_width = min(50, max(len(r.get("description", "") or "") for r in repos))
+    name_width = max(len(r.get("full_name") or "?") for r in repos)
+    desc_width = min(50, max(1, max(len(r.get("description", "") or "") for r in repos)))
 
     header = f"{'Name':<{name_width}} {'Stars':>6} {'Forks':>6} {'Language':<12} {'Pushed'}"
     sep = "-" * len(header)
     rows = [header, sep]
 
     for repo in repos:
-        name = repo["full_name"][:name_width]
+        name = (repo.get("full_name") or "?")[:name_width]
         stars = str(repo.get("stargazers_count", 0))
         forks = str(repo.get("forks_count", 0))
         lang = str(repo.get("language") or "?")[:12]
         pushed = (repo.get("pushed_at") or "?")[:10]
-        desc = textwrap.shorten(repo.get("description") or "", width=desc_width)
+        raw_description = repo.get("description") or ""
+        desc = textwrap.shorten(raw_description, width=desc_width) if raw_description else ""
         rows.append(f"{name:<{name_width}} {stars:>6} {forks:>6} {lang:<12} {pushed}")
 
         if desc:
