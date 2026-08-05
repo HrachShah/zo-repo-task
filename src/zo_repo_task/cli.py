@@ -55,7 +55,10 @@ def search_repos(query: str, session: requests.Session, limit: int = 30) -> list
     response = session.get(url, params=params, timeout=15)
     response.raise_for_status()
     data = response.json()
-    return data.get("items", [])
+    if not isinstance(data, dict):
+        return []
+    items = data.get("items", [])
+    return items if isinstance(items, list) else []
 
 
 def _pushed_date(repo: dict[str, Any]) -> str:
