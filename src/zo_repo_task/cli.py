@@ -98,7 +98,8 @@ def format_repos_table(repos: list[dict[str, Any]]) -> str:
         forks = str(repo.get("forks_count", 0))
         lang = str(repo.get("language") or "?")[:12]
         pushed = _pushed_date(repo)
-        desc = textwrap.shorten(repo.get("description") or "", width=desc_width)
+        raw_description = repo.get("description") or ""
+        desc = textwrap.shorten(raw_description, width=desc_width) if raw_description else ""
         rows.append(f"{name:<{name_width}} {stars:>6} {forks:>6} {lang:<12} {pushed}")
 
         if desc:
