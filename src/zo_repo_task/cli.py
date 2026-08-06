@@ -21,6 +21,14 @@ def _api_limit(limit: int) -> int:
     return min(limit, 100)
 
 
+def _repo_parts(identifier: str) -> tuple[str, str]:
+    """Parse an owner/name identifier without accepting extra path segments."""
+    parts = [part.strip() for part in identifier.strip().strip("/").split("/")]
+    if len(parts) != 2 or not all(parts):
+        raise ValueError("repository must use owner/name format")
+    return parts[0], parts[1]
+
+
 def make_session() -> requests.Session:
     """Create a requests session with appropriate headers."""
     session = requests.Session()
@@ -133,9 +141,12 @@ def cmd_list(args: argparse.Namespace) -> None:
 def cmd_info(args: argparse.Namespace) -> None:
     """Handle the info command."""
     session = make_session()
-    owner, repo = args.repo.strip().rstrip("/").rsplit("/", 1)
     try:
+        owner, repo = _repo_parts(args.repo)
         data = get_repo(owner, repo, session)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(2)
     except requests.HTTPError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
