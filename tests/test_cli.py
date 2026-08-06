@@ -11,6 +11,10 @@ class LimitValidationTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "limit must be at least 1"):
                     validate_limit(limit)
 
+    def test_rejects_boolean_limits(self):
+        with self.assertRaisesRegex(TypeError, "limit must be an integer"):
+            validate_limit(True)
+
     def test_caps_limits_at_github_page_size(self):
         self.assertEqual(validate_limit(101), 100)
 

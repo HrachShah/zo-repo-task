@@ -16,6 +16,8 @@ DEFAULT_BASE_URL = "https://api.github.com"
 
 def validate_limit(limit: int) -> int:
     """Return a usable API page size or reject an invalid one."""
+    if isinstance(limit, bool) or not isinstance(limit, int):
+        raise TypeError("limit must be an integer")
     if limit < 1:
         raise ValueError("limit must be at least 1")
     return min(limit, 100)
