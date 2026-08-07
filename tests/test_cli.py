@@ -3,6 +3,28 @@ from unittest.mock import Mock
 
 from zo_repo_task.cli import format_repo_text, format_repos_table, list_repos, search_repos, validate_limit
 
+class ResponseValidationTests(unittest.TestCase):
+    def test_list_rejects_non_object_items(self):
+        response = Mock()
+        response.json.return_value = [{"full_name": "owner/repo"}, "malformed"]
+        response.raise_for_status.return_value = None
+        session = Mock()
+        session.get.return_value = response
+
+        with self.assertRaisesRegex(ValueError, "invalid repository list"):
+            list_repos("owner", session)
+
+    def test_search_rejects_non_object_items(self):
+        response = Mock()
+        response.json.return_value = {"items": [{"full_name": "owner/repo"}, None]}
+        response.raise_for_status.return_value = None
+        session = Mock()
+        session.get.return_value = response
+
+        with self.assertRaisesRegex(ValueError, "invalid repository search items"):
+            search_repos("query", session)
+
+
 
 class LimitValidationTests(unittest.TestCase):
     def test_rejects_non_positive_limits(self):
@@ -43,3 +65,19 @@ class RepositoryFormattingTests(unittest.TestCase):
     def test_format_repos_table_handles_empty_descriptions(self):
         text = format_repos_table([{"full_name": "owner/project", "description": None}])
         self.assertIn("owner/project", text)
+
+    def test_formatters_ignore_non_string_text_fields(self):
+        repo = {
+            "full_name": {"unexpected": "object"},
+            "description": ["unexpected", "list"],
+            "language": 42,
+            "pushed_at": {"unexpected": "object"},
+        }
+
+        text = format_repo_text(repo)
+        table = format_repos_table([repo])
+
+        self.assertIn("?", text)
+        self.assertIn("?", table)
+        self.assertNotIn("unexpected", text)
+        self.assertNotIn("unexpected", table)

@@ -14,6 +14,29 @@ import requests
 DEFAULT_BASE_URL = "https://api.github.com"
 
 
+def text_value(value: Any, fallback: str = "") -> str:
+    """Return a string field from an API payload without trusting its type."""
+    return value if isinstance(value, str) else fallback
+
+
+def response_items(response: requests.Response, resource: str) -> list[dict[str, Any]]:
+    """Validate a GitHub response that should contain a list of objects."""
+    payload = response.json()
+    if not isinstance(payload, list) or not all(isinstance(item, dict) for item in payload):
+        raise ValueError(f"GitHub returned an invalid {resource} response")
+    return payload
+
+
+def response_search_items(response: requests.Response) -> list[dict[str, Any]]:
+    """Extract and validate repository search results."""
+    payload = response.json()
+    if not isinstance(payload, dict) or not isinstance(payload.get("items"), list):
+        raise ValueError("GitHub returned an invalid repository search response")
+    if not all(isinstance(item, dict) for item in payload["items"]):
+        raise ValueError("GitHub returned invalid repository search items")
+    return payload["items"]
+
+
 def validate_limit(limit: int) -> int:
     """Return a usable API page size or reject an invalid one."""
     if isinstance(limit, bool) or not isinstance(limit, int):
@@ -39,40 +62,44 @@ def list_repos(user: str, session: requests.Session, limit: int = 30) -> list[di
     params = {"sort": "pushed", "per_page": validate_limit(limit), "type": "owner"}
     response = session.get(url, params=params, timeout=15)
     response.raise_for_status()
-    return response.json()
+    return response_items(response, "repository list")
 
 
-def get_repo(owner: str, repo: str, session: requests.Session) -> dict[str, Any]:
+def get_repo(owner: str, repo: str, session: requests.Session):
     """Get repository details."""
     url = f"{DEFAULT_BASE_URL}/repos/{owner}/{repo}"
     response = session.get(url, timeout=15)
     response.raise_for_status()
-    return response.json()
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise ValueError("GitHub returned an invalid repository response")
+    return payload
 
 
-def search_repos(query: str, session: requests.Session, limit: int = 30) -> list[dict[str, Any]]:
+def search_repos(query: str, session: requests.Session, limit: int = 30):
     """Search repositories by keyword."""
     url = f"{DEFAULT_BASE_URL}/search/repositories"
     params = {"q": query, "sort": "stars", "per_page": validate_limit(limit)}
     response = session.get(url, params=params, timeout=15)
     response.raise_for_status()
-    data = response.json()
-    return data.get("items", [])
+    return response_search_items(response)
 
 
 def format_repo_text(repo: dict[str, Any], indent: int = 0) -> str:
     """Format a single repository as human-readable text."""
     prefix = "  " * indent
-    lines = [
-        f"{prefix}{repo.get('full_name') or '?'}",
-    ]
-    if desc := repo.get("description"):
-        lines.append(f"{prefix}  {textwrap.shorten(desc, width=70)}")
+    name = text_value(repo.get("full_name"), "?") or "?"
+    description = text_value(repo.get("description"))
+    language = text_value(repo.get("language"), "?") or "?"
+    pushed = text_value(repo.get("pushed_at"), "?") or "?"
+    lines = [f"{prefix}{name}"]
+    if description:
+        lines.append(f"{prefix}  {textwrap.shorten(description, width=70)}")
     lines.append(
         f"{prefix}  stars={repo.get('stargazers_count', 0)} "
         f"forks={repo.get('forks_count', 0)} "
-        f"lang={repo.get('language') or '?'} "
-        f"pushed={(repo.get('pushed_at') or '?')[:10]}"
+        f"lang={language} "
+        f"pushed={pushed[:10]}"
     )
     return "\n".join(lines)
 
@@ -82,20 +109,22 @@ def format_repos_table(repos: list[dict[str, Any]]) -> str:
     if not repos:
         return "(no repositories)"
 
-    name_width = max(len(r.get("full_name") or "?") for r in repos)
-    desc_width = min(50, max(1, max(len(r.get("description", "") or "") for r in repos)))
+    names = [text_value(repo.get("full_name"), "?") or "?" for repo in repos]
+    descriptions = [text_value(repo.get("description")) for repo in repos]
+    name_width = max(map(len, names))
+    desc_width = min(50, max(1, max(map(len, descriptions))))
 
     header = f"{'Name':<{name_width}} {'Stars':>6} {'Forks':>6} {'Language':<12} {'Pushed'}"
     sep = "-" * len(header)
     rows = [header, sep]
 
     for repo in repos:
-        name = (repo.get("full_name") or "?")[:name_width]
+        name = text_value(repo.get("full_name"), "?") or "?"
         stars = str(repo.get("stargazers_count", 0))
         forks = str(repo.get("forks_count", 0))
-        lang = str(repo.get("language") or "?")[:12]
-        pushed = (repo.get("pushed_at") or "?")[:10]
-        raw_description = repo.get("description") or ""
+        lang = (text_value(repo.get("language"), "?") or "?")[:12]
+        pushed = (text_value(repo.get("pushed_at"), "?") or "?")[:10]
+        raw_description = text_value(repo.get("description"))
         desc = textwrap.shorten(raw_description, width=desc_width) if raw_description else ""
         rows.append(f"{name:<{name_width}} {stars:>6} {forks:>6} {lang:<12} {pushed}")
 
@@ -207,8 +236,8 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         result = args.func(args)
-    except requests.RequestException as e:
-        print(f"Network error: {e}", file=sys.stderr)
+    except (requests.RequestException, ValueError) as e:
+        print(f"Request error: {e}", file=sys.stderr)
         return 1
     return result if isinstance(result, int) else 0
 
