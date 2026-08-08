@@ -39,13 +39,20 @@ def make_session() -> requests.Session:
     return session
 
 
+def _repository_items(data: Any) -> list[dict[str, Any]]:
+    """Keep only repository objects from a GitHub collection response."""
+    if not isinstance(data, list):
+        return []
+    return [item for item in data if isinstance(item, dict)]
+
+
 def list_repos(user: str, session: requests.Session, limit: int = 30) -> list[dict[str, Any]]:
     """List repositories for a GitHub user, sorted by recently pushed."""
     url = f"{DEFAULT_BASE_URL}/users/{user}/repos"
     params = {"sort": "pushed", "per_page": _api_limit(limit), "type": "owner"}
     response = session.get(url, params=params, timeout=15)
     response.raise_for_status()
-    return response.json()
+    return _repository_items(response.json())
 
 
 def get_repo(owner: str, repo: str, session: requests.Session) -> dict[str, Any]:
@@ -65,8 +72,7 @@ def search_repos(query: str, session: requests.Session, limit: int = 30) -> list
     data = response.json()
     if not isinstance(data, dict):
         return []
-    items = data.get("items", [])
-    return items if isinstance(items, list) else []
+    return _repository_items(data.get("items", []))
 
 
 def _pushed_date(repo: dict[str, Any]) -> str:
