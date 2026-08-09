@@ -66,6 +66,19 @@ class RepositoryFormattingTests(unittest.TestCase):
         text = format_repos_table([{"full_name": "owner/project", "description": None}])
         self.assertIn("owner/project", text)
 
+
+    def test_info_ignores_malformed_topics(self):
+        from unittest.mock import patch
+
+        from zo_repo_task.cli import cmd_info
+
+        args = type("Args", (), {"repo": "owner/project", "format": "text"})()
+        with patch("zo_repo_task.cli.get_repo", return_value={"full_name": "owner/project", "topics": {"unexpected": "mapping"}}), patch("zo_repo_task.cli.make_session"):
+            with patch("builtins.print") as printed:
+                self.assertEqual(cmd_info(args), 0)
+
+        self.assertFalse(any("Topics:" in str(call) for call in printed.call_args_list))
+
     def test_formatters_ignore_non_string_text_fields(self):
         repo = {
             "full_name": {"unexpected": "object"},

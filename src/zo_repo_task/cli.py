@@ -174,8 +174,10 @@ def cmd_info(args: argparse.Namespace) -> int:
         print(format_repo_text(data))
         print()
         topics = data.get("topics", [])
-        if topics:
-            print(f"  Topics: {', '.join(topics)}")
+        if isinstance(topics, list):
+            topic_names = [topic for topic in topics if isinstance(topic, str) and topic]
+            if topic_names:
+                print(f"  Topics: {', '.join(topic_names)}")
     return 0
 
 
