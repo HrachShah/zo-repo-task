@@ -46,6 +46,13 @@ def _repository_items(data: Any) -> list[dict[str, Any]]:
     return [item for item in data if isinstance(item, dict)]
 
 
+def _repository_details(data: Any) -> dict[str, Any]:
+    """Validate the repository object returned by a detail request."""
+    if not isinstance(data, dict):
+        raise ValueError("GitHub response did not contain a repository object")
+    return data
+
+
 def list_repos(user: str, session: requests.Session, limit: int = 30) -> list[dict[str, Any]]:
     """List repositories for a GitHub user, sorted by recently pushed."""
     url = f"{DEFAULT_BASE_URL}/users/{user}/repos"
@@ -60,7 +67,7 @@ def get_repo(owner: str, repo: str, session: requests.Session) -> dict[str, Any]
     url = f"{DEFAULT_BASE_URL}/repos/{owner}/{repo}"
     response = session.get(url, timeout=15)
     response.raise_for_status()
-    return response.json()
+    return _repository_details(response.json())
 
 
 def search_repos(query: str, session: requests.Session, limit: int = 30) -> list[dict[str, Any]]:
