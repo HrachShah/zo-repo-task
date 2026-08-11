@@ -3,6 +3,19 @@ from unittest.mock import Mock
 
 from zo_repo_task.cli import format_repo_text, format_repos_table, list_repos, search_repos, validate_limit
 
+
+class CommandErrorHandlingTests(unittest.TestCase):
+    def test_main_reports_malformed_api_payload_without_traceback(self):
+        from unittest.mock import patch
+
+        from zo_repo_task.cli import main
+
+        with patch("zo_repo_task.cli.list_repos", side_effect=ValueError("invalid repository list")):
+            with patch("sys.stderr") as stderr:
+                self.assertEqual(main(["list", "--user", "owner"]), 1)
+
+        stderr.write.assert_called_once_with("Error: invalid repository list\n")
+
 class ResponseValidationTests(unittest.TestCase):
     def test_list_rejects_non_object_items(self):
         response = Mock()

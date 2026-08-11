@@ -238,8 +238,11 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         result = args.func(args)
-    except (requests.RequestException, ValueError) as e:
+    except requests.RequestException as e:
         print(f"Request error: {e}", file=sys.stderr)
+        return 1
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
         return 1
     return result if isinstance(result, int) else 0
 
